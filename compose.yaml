@@ -1,0 +1,73 @@
+services:
+  ruby:
+    build:
+      context: .
+      dockerfile: ./docker/ruby/Dockerfile
+    container_name: ruby
+    command: /bin/sh
+    volumes:
+      - type: bind
+        source: .
+        target: /usr/src/app
+    environment:
+      STAGE: "development"
+      DB_HOST: "mysql"
+      DB_USER: "root"
+      DB_PASSWORD: ""
+      AWS_REGION: "region"
+      AWS_ACCESS_KEY_ID: "dummy"
+      AWS_SECRET_ACCESS_KEY: "dummy"
+      OPENEXCHANGERATES_API_KEY: ""
+      YEAR_MONTH_DESIGNATION: '2023-08'
+    depends_on:
+      - mysql
+      - localstack
+    tty: true
+    stdin_open: true
+
+  mysql:
+    build:
+      context: .
+      dockerfile: ./docker/mysql/Dockerfile
+    container_name: mysql
+    ports:
+      - target: 3306
+        host_ip: 127.0.0.1
+        published: 3306
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: volume # changes are reflected in container
+        source: mysql-data
+        target: /var/lib/mysql
+        volume:
+          nocopy: true
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+
+  localstack:
+    build:
+      context: .
+      dockerfile: ./docker/localstack/Dockerfile
+    container_name: localstack
+    ports:
+      - target: 4566
+        host_ip: 127.0.0.1
+        published: 4566
+        protocol: tcp
+        mode: host
+    environment:
+      SERVICES: s3
+      AWS_DEFAULT_REGION: region
+      DATA_DIR: /tmp/localstack/data
+      HOSTNAME_EXTERNAL: localstack
+      AWS_REGION: "region"
+      AWS_ACCESS_KEY_ID: "dummy"
+      AWS_SECRET_ACCESS_KEY: "dummy"
+    volumes:
+      - ./docker/localstack/init/:/docker-entrypoint-initaws.d
+
+volumes:
+  mysql-data:
+    name: mysql-data
+    external: true
